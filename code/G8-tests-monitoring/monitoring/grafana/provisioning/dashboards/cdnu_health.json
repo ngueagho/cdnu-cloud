@@ -1,0 +1,111 @@
+{
+  "title": "CDNU Health Overview",
+  "uid": "cdnu-health-001",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["cdnu", "health", "production"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Statut global des 10 CDNUs",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum(cdnu_status) / count(cdnu_status) * 100",
+        "legendFormat": "% CDNUs sains"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 70 },
+            { "color": "green", "value": 90 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Statut S3 par CDNU",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 4 },
+      "targets": [{
+        "expr": "cdnu_status{service=\"s3\"}",
+        "legendFormat": "{{ cdnu }}"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "green", "value": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Base de données PostgreSQL",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 10 },
+      "targets": [{
+        "expr": "cdnu_database_up",
+        "legendFormat": "RDS PostgreSQL"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "green", "value": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Latence de scrape Prometheus (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 10 },
+      "targets": [{
+        "expr": "scrape_duration_seconds{job=\"cdnu-api\"} * 1000",
+        "legendFormat": "Latence scrape"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 2000 },
+              { "color": "red", "value": 5000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Uptime API (dernière heure)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "targets": [{
+        "expr": "up{job=\"cdnu-api\"}",
+        "legendFormat": "API CDNU"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1
+        }
+      }
+    }
+  ]
+}

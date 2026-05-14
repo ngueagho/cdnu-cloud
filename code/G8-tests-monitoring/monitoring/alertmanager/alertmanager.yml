@@ -1,0 +1,46 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.minesup.cm:587'
+  smtp_from: 'alertes-cloud@minesup.cm'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'cdnu']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'equipe-infra'
+
+  routes:
+    # Alertes critiques → notification immédiate
+    - match:
+        severity: critical
+      receiver: 'equipe-infra-urgent'
+      repeat_interval: 1h
+
+    # Alertes warning → groupées
+    - match:
+        severity: warning
+      receiver: 'equipe-infra'
+      repeat_interval: 6h
+
+receivers:
+  - name: 'equipe-infra'
+    email_configs:
+      - to: 'cloud-admin@minesup.cm'
+        send_resolved: true
+        subject: '[CDNU] {{ .GroupLabels.alertname }} — {{ .Status | toUpper }}'
+
+  - name: 'equipe-infra-urgent'
+    email_configs:
+      - to: 'cloud-admin@minesup.cm, dsi@minesup.cm'
+        send_resolved: true
+        subject: '[CRITIQUE CDNU] {{ .GroupLabels.alertname }}'
+
+inhibit_rules:
+  # Si l'API est down, inhiber les alertes de latence (déjà couvertes)
+  - source_match:
+      alertname: 'APIDown'
+    target_match:
+      alertname: 'HighScrapeLatency'
+    equal: ['job']
