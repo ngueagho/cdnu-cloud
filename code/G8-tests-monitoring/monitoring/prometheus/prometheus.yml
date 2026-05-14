@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # API CDNU principale
+  - job_name: 'cdnu-api'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Prometheus lui-même
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Health checks individuels par CDNU
+  - job_name: 'cdnu-health-checks'
+    metrics_path: '/cdnu'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    scrape_interval: 60s

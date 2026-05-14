@@ -1,0 +1,148 @@
+name: CI/CD — Build, Test & Deploy API CDNU
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'G6-cicd-app/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'G6-cicd-app/**'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URL }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ── Étape 1 : Lint et vérification du code ─────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: G6-cicd-app/app/requirements.txt
+
+      - name: Installer les dépendances de lint
+        run: |
+          pip install flake8 black
+          pip install -r G6-cicd-app/app/requirements.txt
+
+      - name: Vérifier le formatage (black)
+        run: black --check G6-cicd-app/app/
+
+      - name: Lint (flake8)
+        run: flake8 G6-cicd-app/app/ --max-line-length=100 --exclude=venv
+
+  # ── Étape 2 : Tests unitaires ──────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: G6-cicd-app/app/requirements.txt
+
+      - name: Installer les dépendances
+        run: pip install -r G6-cicd-app/app/requirements.txt
+
+      - name: Exécuter les tests avec couverture
+        run: |
+          cd G6-cicd-app/app
+          pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing
+
+      - name: Upload rapport de couverture
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: G6-cicd-app/app/coverage.xml
+
+  # ── Étape 3 : Build et push de l'image Docker ──────────────────────────────
+  build-push:
+    name: Build & Push ECR
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image-uri: ${{ steps.build-push.outputs.image-uri }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build et push de l'image
+        id: build-push
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI="${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker build -t "$IMAGE_URI" G6-cicd-app/app/
+          docker push "$IMAGE_URI"
+          # Également tagger latest
+          docker tag "$IMAGE_URI" "${ECR_REPOSITORY}:latest"
+          docker push "${ECR_REPOSITORY}:latest"
+          echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+  # ── Étape 4 : Déploiement ──────────────────────────────────────────────────
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build-push
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Déployer sur EC2 via SSM (pas de SSH exposé)
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Role,Values=api-server" \
+            --parameters "commands=[
+              'docker pull ${{ needs.build-push.outputs.image-uri }}',
+              'docker stop cdnu-api || true',
+              'docker rm cdnu-api || true',
+              'docker run -d --name cdnu-api -p 8000:8000 \
+                --env-file /etc/cdnu/app.env \
+                ${{ needs.build-push.outputs.image-uri }}'
+            ]" \
+            --comment "Deploy ${{ github.sha }}"
+
+      - name: Vérifier le déploiement (health check)
+        run: |
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.API_HEALTH_URL }}/health")
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check échoué (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "Déploiement OK — API répond sur /health"

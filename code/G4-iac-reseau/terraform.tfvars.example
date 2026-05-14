@@ -1,0 +1,16 @@
+# Copier ce fichier vers terraform.tfvars et adapter les valeurs
+# IMPORTANT : Ne JAMAIS committer terraform.tfvars (contient des configs sensibles)
+
+project_name = "cdnu-cloud"
+environment  = "prod"
+aws_region   = "eu-west-1"
+
+availability_zones = ["eu-west-1a", "eu-west-1b"]
+
+enable_nat_gateway     = true
+enable_transit_gateway = true
+
+tags = {
+  CostCenter = "CDNU-INFRA"
+  Owner      = "MINESUP"
+}

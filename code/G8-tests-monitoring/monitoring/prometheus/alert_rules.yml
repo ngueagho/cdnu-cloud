@@ -1,0 +1,44 @@
+groups:
+  - name: cdnu-availability
+    rules:
+      # Alerte si l'API est complètement inaccessible
+      - alert: APIDown
+        expr: up{job="cdnu-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API CDNU inaccessible"
+          description: "L'API de supervision est down depuis plus de 2 minutes."
+
+      # Alerte si un CDNU passe en état dégradé
+      - alert: CDNUDegraded
+        expr: cdnu_status == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CDNU {{ $labels.cdnu }} dégradé"
+          description: "Le service {{ $labels.service }} du CDNU {{ $labels.cdnu }} est indisponible."
+
+      # Alerte si la base de données est inaccessible
+      - alert: DatabaseDown
+        expr: cdnu_database_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Base de données PostgreSQL inaccessible"
+          description: "La connexion à RDS PostgreSQL a échoué depuis 2 minutes."
+
+  - name: cdnu-performance
+    rules:
+      # Alerte si la latence de scrape dépasse 5 secondes
+      - alert: HighScrapeLatency
+        expr: scrape_duration_seconds{job="cdnu-api"} > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence de scrape élevée"
+          description: "Le scrape Prometheus prend {{ $value }}s (seuil 5s)."

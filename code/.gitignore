@@ -1,0 +1,181 @@
+# =============================================================================
+# GITIGNORE - Projet CDNU Cloud
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Terraform
+# -----------------------------------------------------------------------------
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+crash.log
+crash.*.log
+
+# Variables sensibles — utiliser *.tfvars.example à la place
+*.tfvars
+!*.tfvars.example
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plans Terraform (peuvent contenir des secrets)
+*.tfplan
+*.plan
+
+# Répertoire de plugins Terraform
+.terraform.d/
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.pyc
+*.pyo
+
+# Environnements virtuels
+venv/
+.venv/
+env/
+.env/
+ENV/
+.virtualenv/
+
+# Variables d'environnement locales
+.env
+.env.local
+.env.*.local
+!.env.example
+!shared/.env.example
+
+# Tests et couverture
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff / Flake8
+.ruff_cache/
+
+# -----------------------------------------------------------------------------
+# Secrets et credentials (NE JAMAIS COMMITTER)
+# -----------------------------------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.pub
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*.ppk
+
+# AWS credentials
+credentials
+credentials.csv
+.aws/credentials
+aws_credentials*
+
+# Fichiers de secrets génériques
+*secret*
+*password*
+*passwd*
+*token*
+*.vault
+vault.yaml
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Ne pas versionner les images Docker locales
+*.tar.gz
+
+# -----------------------------------------------------------------------------
+# Éditeurs et IDEs
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# JetBrains
+*.iml
+*.iws
+.idea/
+
+# Visual Studio Code
+.vscode/settings.json
+.vscode/launch.json
+!.vscode/extensions.json
+
+# -----------------------------------------------------------------------------
+# OS
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -----------------------------------------------------------------------------
+# Grafana (données persistantes locales)
+# -----------------------------------------------------------------------------
+G8-tests-monitoring/monitoring/grafana/data/
+G8-tests-monitoring/monitoring/prometheus/data/
+
+# -----------------------------------------------------------------------------
+# Divers
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+.cache/
+node_modules/
